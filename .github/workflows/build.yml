@@ -1,0 +1,93 @@
+name: Build ISOs
+
+on:
+  schedule:
+    - cron: '23 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-isos
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: sh
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: void
+            arch: x86_64
+            image: ghcr.io/void-linux/void-glibc-full:latest
+          - distro: void
+            arch: x86_64-musl
+            image: ghcr.io/void-linux/void-glibc-full:latest
+          - distro: chimera
+            arch: x86_64
+            image: docker.io/chimeralinux/chimera:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        env:
+          DISTRO: ${{ matrix.distro }}
+          ARCH: ${{ matrix.arch }}
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -eu
+          sudo modprobe loop
+          docker run --rm --pull always --privileged \
+            -v /dev:/dev -v "$PWD:/workspace" -w /workspace \
+            "$IMAGE" sh ./build.sh "$DISTRO" "$ARCH"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iso-${{ matrix.distro }}-${{ matrix.arch }}
+          path: out/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: iso-*
+          path: out
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          cd out
+          sha256sum ./*.iso > SHA256SUMS
+          tag="$(date -u +%Y%m%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cat > /tmp/release-notes.md <<'EOF'
+          Monthly x86_64 base images, built from current upstream tools and repositories.
+
+          Includes Void Linux (glibc and musl) and Chimera Linux.
+          These are unofficial builds by UniversalRepository.
+
+          Verify downloads with `sha256sum -c SHA256SUMS`.
+          Each image has a `.source.txt` file recording its upstream tool commit.
+          EOF
+          gh release create "$tag" --draft --target "$GITHUB_SHA" \
+            --title "Monthly ISOs - $(date -u +%Y-%m-%d)" \
+            --notes-file /tmp/release-notes.md
+          gh release upload "$tag" ./*.iso ./*.source.txt SHA256SUMS
+          gh release edit "$tag" --draft=false --latest
