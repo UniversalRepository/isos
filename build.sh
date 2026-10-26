@@ -32,7 +32,7 @@ case "$distro" in
     chimera)
         apk update
         apk upgrade
-        apk add git ca-certificates util-linux
+        apk add git ca-certificates util-linux util-linux-mount
         git clone --depth 1 https://github.com/chimera-linux/chimera-live.git "$work/src"
         cd "$work/src"
         image="chimera-linux-$arch-LIVE-$datecode-base.iso"
