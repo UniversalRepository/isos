@@ -8,6 +8,7 @@ Currently builds x86_64 base images for:
 
 - Void Linux (glibc and musl), using [void-mklive](https://github.com/void-linux/void-mklive).
 - Chimera Linux, using [chimera-live](https://github.com/chimera-linux/chimera-live).
+- Alpine linux edge, using [aports mkimage](https://github.com/alpinelinux/aports/blob/master/scripts/mkimg.sh)
 
 These use the upstream base image presets. No extra URepo packages are added. Each release includes SHA256 checksums and the upstream tool commit used for each image.
 

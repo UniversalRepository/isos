@@ -33,6 +33,9 @@ jobs:
           - distro: chimera
             arch: x86_64
             image: docker.io/chimeralinux/chimera:latest
+          - distro: alpine
+            arch: x86_64
+            image: docker.io/library/alpine:edge
     steps:
       - uses: actions/checkout@v4
 
@@ -80,7 +83,7 @@ jobs:
           cat > /tmp/release-notes.md <<'EOF'
           Monthly x86_64 base images, built from current upstream tools and repositories.
 
-          Includes Void Linux (glibc and musl) and Chimera Linux.
+          Includes Void Linux (glibc and musl), Chimera Linux, and Alpine Linux edge (standard).
           These are unofficial builds by UniversalRepository.
 
           Verify downloads with `sha256sum -c SHA256SUMS`.
